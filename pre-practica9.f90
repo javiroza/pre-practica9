@@ -34,6 +34,7 @@ program pre_practica9
     ! -------------------------------- Apartat 3 --------------------------------------- !
     open(11,file="aux1.dat") ! Convergència de Jacobi
     open(12,file="aux2.dat") ! Convergència de Gauss-Seidel
+    open(14,file="aux4.dat") ! Convergència Sobrerelaxació
     write(11,*) "# Niteracions, Temperatura"
     write(12,*) "# Niteracions, Temperatura"
     t_ini=(/6.d0,19.d0,320.d0/) ! Vector amb les configuracions inicials de temperatura
@@ -70,6 +71,23 @@ program pre_practica9
         enddo
         call write(12)
     enddo
+ 
+    ! Convergència de Sobrerelaxació
+    do m=1,3
+        call ci(T_old,t_ini(m))
+        T_new=T_old
+        counter=1
+        criteri=0
+        do while (criteri.ne.1)
+            T_check=T_old
+            call solver(T_old,T_new,h,rho,2)
+            write(14,*) counter,T_new(int(18.d0/h),int(12.5d0/h)) ! index m-1 (gnuplot) 
+            counter=counter+1
+            call check(T_new,T_check,criteri,epsilon)
+            T_old=T_new
+        enddo
+        call write(14)
+    enddo
 
     ! Escriptura en arxiu pel mapejat gràfic 2D i 3D
     open(13,file="aux3.dat")
@@ -82,7 +100,7 @@ program pre_practica9
     criteri=0
     do while (criteri.ne.1)
         T_check=T_old
-        call solver(T_old,T_new,h,rho,1) 
+        call solver(T_old,T_new,h,rho,2) 
         counter=counter+1
         call check(T_new,T_check,criteri,epsilon)
         T_old=T_new
@@ -96,9 +114,13 @@ program pre_practica9
         write(13,*) ""
     enddo
 
+    ! Els programes "script_map2D.gnu" i "script_map3D.gnu" s'encarreguen de crear els mapes
+    ! amb escala de colors a partir de l'arxiu en què acabem d'escriure.
+
     close(11)
     close(12)
     close(13)
+    close(14)
 end program pre_practica9
 
 ! Subrutina solver --> Calcula una iteració per resoldre l'equació de Poisson
@@ -129,8 +151,14 @@ subroutine solver(T_old,T_new,h,funci,icontrol)
                 T_old(i,j)=T_new(i,j)
             enddo
         enddo
-    else
-        print*,"A viam, xato..."
+    else if (icontrol.eq.2) then ! Sobrerelaxació
+        do i=2,Nx-1
+            do j=2,Ny-1
+                T_new(i,j)=T_old(i,j)+0.25d0*1.73d0*(T_old(i,j+1)+T_old(i,j-1)+T_old(i+1,j)+T_old(i-1,j)-4.d0*T_old(i,j))
+                T_new(i,j)=T_new(i,j)+0.25d0*1.73d0*(h**2.d0)*funci(i*h,j*h) ! Aquesta línea és la continuació de la de dalt
+                T_old(i,j)=T_new(i,j)
+            enddo
+        enddo
     endif
 
     return 
