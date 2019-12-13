@@ -114,13 +114,14 @@ program pre_practica9
         write(13,*) ""
     enddo
 
-    ! Els programes "script_map2D.gnu" i "script_map3D.gnu" s'encarreguen de crear els mapes
-    ! amb escala de colors a partir de l'arxiu en què acabem d'escriure.
-
     close(11)
     close(12)
     close(13)
     close(14)
+    
+    ! -------------------------------- Apartat 4 --------------------------------------- !
+    ! Els programes "script_map2D.gnu" i "script_map3D.gnu" s'encarreguen de crear els mapes
+    ! amb escala de colors a partir de l'arxiu en què acabem d'escriure.
 end program pre_practica9
 
 ! Subrutina solver --> Calcula una iteració per resoldre l'equació de Poisson
