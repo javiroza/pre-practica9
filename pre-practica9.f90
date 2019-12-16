@@ -15,17 +15,18 @@
 program pre_practica9
     implicit none
     integer Nx,Ny,k,l,m,counter,criteri
-    double precision Lx,Ly,h,rho,t_ini(3),epsilon
+    double precision Lx,Ly,h,rho,t_ini(3),epsilon,w
     double precision, allocatable :: T_old(:,:),T_new(:,:),T_check(:,:)
     external rho
-    common/cts/Lx,Ly,Nx,Ny
+    common/cts/Lx,Ly,Nx,Ny,w
 
     Lx=32.5d0
     Ly=16.5d0
-    h=0.25d0
+    h=0.5d0 ! Mida dels intervals del grid
     Nx=int(Lx/h)
     Ny=int(Ly/h)
-    epsilon=0.0001d0
+    epsilon=1d-4 ! Precisió (diferència entre dos valors successius de T)
+    w=1.73d0 ! Variable "pes" per sobrerelaxació
     allocate(T_old(Nx,Ny))
     allocate(T_new(Nx,Ny))
     allocate(T_check(Nx,Ny))
@@ -54,6 +55,8 @@ program pre_practica9
         enddo
         call write(11)
     enddo
+    print*,""
+    print*,"Jacobi fet"
  
     ! Convergència de Gauss-Seidel
     do m=1,3
@@ -71,6 +74,7 @@ program pre_practica9
         enddo
         call write(12)
     enddo
+    print*,"Gauss-Seidel fet"
  
     ! Convergència de Sobrerelaxació
     do m=1,3
@@ -88,6 +92,7 @@ program pre_practica9
         enddo
         call write(14)
     enddo
+    print*,"Sobrerelaxació fet"
 
     ! Escriptura en arxiu pel mapejat gràfic 2D i 3D
     open(13,file="aux3.dat")
@@ -102,9 +107,12 @@ program pre_practica9
         T_check=T_old
         call solver(T_old,T_new,h,rho,2) 
         counter=counter+1
-        call check(T_new,T_check,criteri,epsilon)
+        if (mod(counter,1000).eq.0) then
+            call check(T_new,T_check,criteri,epsilon)
+        endif
         T_old=T_new
     enddo
+    print*,"Càlcul dels mapes fet"
 
     ! Escrivim el resultat en un arxiu
     do k=1,Nx
@@ -118,7 +126,7 @@ program pre_practica9
     close(12)
     close(13)
     close(14)
-    
+
     ! -------------------------------- Apartat 4 --------------------------------------- !
     ! Els programes "script_map2D.gnu" i "script_map3D.gnu" s'encarreguen de crear els mapes
     ! amb escala de colors a partir de l'arxiu en què acabem d'escriure.
@@ -129,15 +137,15 @@ subroutine solver(T_old,T_new,h,funci,icontrol)
     ! T_old --> Matriu amb els valors a recalcular
     ! T_new --> Matriu amb els valors nous calculats
     ! h --> Interval de particionat de la malla
-    ! funci --> Funció igualada al laplacià de la funció incògnita
+    ! funci --> "fonts" de l'equació de Poisson
     ! icontrol --> Variable de control del mètode de resolució
         ! 0 --> Jacobi
         ! 1 --> Gauss-Seidel
-        ! 2 --> Sobrerelaxació (pròximament)
+        ! 2 --> Sobrerelaxació
     implicit none
     integer i,j,Nx,Ny,icontrol
-    double precision T_old(Nx,Ny),T_new(Nx,Ny),h,funci,Lx,Ly
-    common/cts/Lx,Ly,Nx,Ny
+    double precision T_old(Nx,Ny),T_new(Nx,Ny),h,funci,Lx,Ly,w
+    common/cts/Lx,Ly,Nx,Ny,w
 
     if (icontrol.eq.0) then ! Jacobi
         do i=2,Nx-1
@@ -155,8 +163,8 @@ subroutine solver(T_old,T_new,h,funci,icontrol)
     else if (icontrol.eq.2) then ! Sobrerelaxació
         do i=2,Nx-1
             do j=2,Ny-1
-                T_new(i,j)=T_old(i,j)+0.25d0*1.73d0*(T_old(i,j+1)+T_old(i,j-1)+T_old(i+1,j)+T_old(i-1,j)-4.d0*T_old(i,j))
-                T_new(i,j)=T_new(i,j)+0.25d0*1.73d0*(h**2.d0)*funci(i*h,j*h) ! Aquesta línea és la continuació de la de dalt
+                T_new(i,j)=T_old(i,j)+0.25d0*w*(T_old(i,j+1)+T_old(i,j-1)+T_old(i+1,j)+T_old(i-1,j)-4.d0*T_old(i,j))
+                T_new(i,j)=T_new(i,j)+0.25d0*w*(h**2.d0)*funci(i*h,j*h) ! Aquesta línea és la continuació de la de dalt
                 T_old(i,j)=T_new(i,j)
             enddo
         enddo
@@ -171,10 +179,10 @@ subroutine ci(T_old,t_int)
     ! t_int --> temperatura (homogènia) a l'interior
     implicit none
     double precision T_old(Nx,Ny),t_int
-    double precision Lx,Ly
+    double precision Lx,Ly,w
     integer Nx,Ny
     integer k,l
-    common/cts/Lx,Ly,Nx,Ny
+    common/cts/Lx,Ly,Nx,Ny,w
 
     ! Especifiquem la temperatura de l'interior
     do k=2,Nx-1
@@ -202,9 +210,9 @@ subroutine check(T_1,T_2,criteri,epsilon)
     ! Criteri --> És 0 si no es compleix el criteri, i 1 si ho fa 
     ! epsilon --> Variable de control del criteri
     implicit none
-    double precision T_1(Nx,Ny),T_2(Nx,Ny),Lx,Ly,epsilon
+    double precision T_1(Nx,Ny),T_2(Nx,Ny),Lx,Ly,epsilon,w
     integer i,j,Nx,Ny,criteri
-    common/cts/Lx,Ly,Nx,Ny
+    common/cts/Lx,Ly,Nx,Ny,w
 
     criteri=1
     do i=2,Nx-1
@@ -230,7 +238,9 @@ subroutine write(arxiu)
     return
 end subroutine
 
+! Funció rho --> Funció corresponent a les "fonts" en l'equació de Poisson
 double precision function rho(x,y)
+    ! x,y --> Coordenades espacials
     implicit none
     double precision x,y,rho1,rho2,r
 
