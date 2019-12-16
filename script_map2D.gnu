@@ -6,4 +6,4 @@ set output "P9-1920-fig-map-2D.png"
 set title "Mapa de Temperatura"
 
 # Plot 
-plot "aux3.dat" w image
+plot "aux3.dat" w image t ""
